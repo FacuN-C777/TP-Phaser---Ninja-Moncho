@@ -22,6 +22,7 @@ export default class game extends Phaser.Scene {
     this.load.image("square", "./public/assets/square.png");
     this.load.image("triangle", "./public/assets/triangle.png");
     this.load.image("ninja", "./public/assets/Ninja.png");
+    this.load.image("background", "./public/assets/FondoMenu.jpg");
   }
 
   create() {
@@ -64,6 +65,19 @@ export default class game extends Phaser.Scene {
           this.timer.remove();
           this.physics.pause();
           //this.scene.start("winMenu");
+          this.add.image(400, 300, "background");
+          this.add.text(280, 200, "You win", {
+            fontSize: "50px",
+            color: "#000",
+          });
+          this.add.text(250, 250, `Your score was ${this.score}`, {
+            fontSize: "30px",
+            color: "#000",
+          });
+          this.add.text(150, 300, `Press "R" key to start again`, {
+            fontSize: "30px",
+            color: "#000",
+          });
         }
       },
       loop: true,
@@ -88,6 +102,10 @@ export default class game extends Phaser.Scene {
         sprite.allowGravity = false;
         sprite.value = Phaser.Math.Between(10, 50);
         this.physics.add.collider(this.shapes, this.platform);
+
+        if (this.timeLeft === 0) {
+          this.collectables.remove();
+        }
       },
       loop: true,
     });
@@ -104,6 +122,12 @@ export default class game extends Phaser.Scene {
     this.scoreText = this.add.text(20, 20, "Score:" + this.score, {
       fontSize: "25px",
       color: "#000",
+    });
+
+    this.keydown = this.input.keyboard.addKeys("R");
+
+    this.input.keyboard.on("keydown-R", () => {
+      this.scene.restart();
     });
   }
 
@@ -127,5 +151,9 @@ export default class game extends Phaser.Scene {
     shape.disableBody(true, true);
     this.score++;
     this.scoreText.setText("Score:" + this.score);
+
+    this.input.keyboard.on("keydown-R", () => {
+      this.scene.restart();
+    });
   }
 }

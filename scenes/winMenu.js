@@ -14,7 +14,9 @@ export default class winMenu extends Phaser.Scene {
     // init variables
     // take data passed from other scenes
     // data object param {}
-    game.score;
+    {
+      game.data(score);
+    }
   }
 
   preload() {
