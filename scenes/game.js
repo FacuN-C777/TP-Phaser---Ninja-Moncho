@@ -12,6 +12,8 @@ export default class game extends Phaser.Scene {
     // init variables
     // take data passed from other scenes
     // data object param {}
+    this.canJump = false;
+    this.spawnerTime = 1000;
   }
 
   preload() {
@@ -23,6 +25,7 @@ export default class game extends Phaser.Scene {
     this.load.image("triangle", "./public/assets/triangle.png");
     this.load.image("ninja", "./public/assets/Ninja.png");
     this.load.image("background", "./public/assets/FondoMenu.jpg");
+    this.load.image("bomb", "./public/assets/bomb.png");
   }
 
   create() {
@@ -32,6 +35,9 @@ export default class game extends Phaser.Scene {
     //platforms
     this.platform = this.physics.add.staticGroup();
     this.platform.create(400, 580, "platform").setScale(2).refreshBody();
+    this.platformB = this.physics.add.staticGroup();
+    this.platformB.create(120, 200, "platform");
+    this.platformB.create(400, 380, "platform");
 
     //player config
     this.player = this.physics.add
@@ -42,10 +48,27 @@ export default class game extends Phaser.Scene {
     this.cursors = this.input.keyboard.createCursorKeys();
 
     this.player.setCollideWorldBounds(true);
-    this.physics.add.collider(this.platform, this.player);
+    this.physics.add.collider(
+      this.platform,
+      this.player,
+      () => {
+        this.canJump = true;
+      },
+      null,
+      this
+    );
+    this.physics.add.collider(
+      this.platformB,
+      this.player,
+      () => {
+        this.canJump = true;
+      },
+      null,
+      this
+    );
 
     //timer config
-    this.timeLeft = 60;
+    this.timeLeft = 40;
     this.timerText = this.add.text(680, 20, "time:" + this.timeLeft, {
       fontSize: "25px",
       color: "#000",
@@ -58,26 +81,7 @@ export default class game extends Phaser.Scene {
         this.timerText.setText("time:" + this.timeLeft);
 
         if (this.timeLeft <= 0) {
-          this.add.text(280, 250, "Game Over", {
-            fontSize: "50px",
-            color: "#000",
-          });
-          this.timer.remove();
-          this.physics.pause();
-          //this.scene.start("winMenu");
-          this.add.image(400, 300, "background");
-          this.add.text(280, 200, "You win", {
-            fontSize: "50px",
-            color: "#000",
-          });
-          this.add.text(250, 250, `Your score was ${this.score}`, {
-            fontSize: "30px",
-            color: "#000",
-          });
-          this.add.text(150, 300, `Press "R" key to start again`, {
-            fontSize: "30px",
-            color: "#000",
-          });
+          this.scene.start("endMenu", { score: this.score });
         }
       },
       loop: true,
@@ -85,32 +89,33 @@ export default class game extends Phaser.Scene {
 
     //colectables mechanic
     this.shapes = this.physics.add.group();
-    this.collectables = this.time.addEvent({
-      delay: 1000,
+    this.rampingDificulty = this.time.addEvent({
+      delay: 5000,
       callback: () => {
-        let shape = Phaser.Math.RND.pick(["square", "triangle", "diamond"]);
+        this.spawnerTime -= 100;
+        this.time.removeEvent(this.collectables);
+        this.collectables = this.time.addEvent({
+          delay: this.spawnerTime,
+          callback: () => {
+            this.spawnerLogic();
+          },
 
-        let x =
-          this.player.x < 400
-            ? Phaser.Math.Between(400, 800)
-            : Phaser.Math.Between(0, 400);
-
-        let sprite = this.shapes.create(x, 16, shape);
-        sprite.setBounce(0.5);
-        sprite.setCollideWorldBounds(true);
-        sprite.setVelocity(Phaser.Math.Between(-200, 200), 20);
-        sprite.allowGravity = false;
-        sprite.value = Phaser.Math.Between(10, 50);
-        this.physics.add.collider(this.shapes, this.platform);
-
-        if (this.timeLeft === 0) {
-          this.collectables.remove();
-        }
+          loop: true,
+        });
       },
+      loop: 5,
+    });
+
+    this.collectables = this.time.addEvent({
+      delay: this.spawnerTime,
+      callback: () => {
+        this.spawnerLogic();
+      },
+
       loop: true,
     });
 
-    this.physics.add.collider(
+    this.physics.add.overlap(
       this.player,
       this.shapes,
       this.hitShape,
@@ -134,26 +139,66 @@ export default class game extends Phaser.Scene {
   update() {
     //movement
     if (this.cursors.left.isDown) {
-      this.player.setVelocityX(-160);
+      this.player.setVelocityX(-200);
     } else if (this.cursors.right.isDown) {
-      this.player.setVelocityX(160);
+      this.player.setVelocityX(200);
     } else {
       this.player.setVelocityX(0);
     }
-    if (this.cursors.up.isDown && this.player.body.touching.down) {
+    if (
+      this.cursors.up.isDown &&
+      this.player.body.touching.down &&
+      this.canJump
+    ) {
+      this.canJump = false;
       this.player.setVelocityY(-300);
     }
-
-    //score tracking
-  }
-  hitShape(player, shape) {
-    console.log(shape.value);
-    shape.disableBody(true, true);
-    this.score++;
-    this.scoreText.setText("Score:" + this.score);
 
     this.input.keyboard.on("keydown-R", () => {
       this.scene.restart();
     });
+  }
+  hitShape(player, shape) {
+    shape.disableBody(true, true);
+    this.score += shape.value;
+    this.scoreText.setText("Score:" + this.score);
+  }
+
+  loseValue(shape, platform) {
+    shape.value -= 5;
+    if (shape.value <= 0) {
+      shape.destroy();
+    }
+  }
+
+  spawnerLogic() {
+    let shape = Phaser.Math.RND.pick(["square", "triangle", "diamond", "bomb"]);
+
+    let x =
+      this.player.x < 400
+        ? Phaser.Math.Between(400, 800)
+        : Phaser.Math.Between(0, 400);
+
+    let sprite = this.shapes.create(x, 16, shape);
+    sprite.setBounce(0.7);
+    sprite.setCollideWorldBounds(true);
+    sprite.setVelocity(Phaser.Math.Between(-200, 200), 20);
+    sprite.allowGravity = false;
+    if (shape == "square") {
+      sprite.value = 6;
+    } else if (shape == "triangle") {
+      sprite.value = 10;
+    } else if (shape == "diamond") {
+      sprite.value = 20;
+    } else {
+      sprite.value = -100;
+    }
+    this.physics.add.collider(
+      this.shapes,
+      this.platform,
+      this.loseValue,
+      null,
+      this
+    );
   }
 }

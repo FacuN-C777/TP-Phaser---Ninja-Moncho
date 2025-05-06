@@ -1,5 +1,6 @@
 import game from "./scenes/game.js";
-import winMenu from "./scenes/winMenu.js";
+import winMenu from "./scenes/endMenu.js";
+import endMenu from "./scenes/endMenu.js";
 
 // Create a new Phaser config object
 const config = {
@@ -28,7 +29,7 @@ const config = {
   // List of scenes to load
   // Only the first scene will be shown
   // Remember to import the scene before adding it to the list
-  scene: [game],
+  scene: [game, endMenu],
   //scene: [winMenu],
 };
 
