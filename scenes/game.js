@@ -18,7 +18,7 @@ export default class game extends Phaser.Scene {
 
   preload() {
     // load assets
-    this.load.image("sky", "./public/assets/cielo.webp");
+    this.load.image("sky", "./public/assets/cielo.jpg");
     this.load.image("platform", "./public/assets/platform.png");
     this.load.image("diamond", "./public/assets/diamond.png");
     this.load.image("square", "./public/assets/square.png");
